@@ -1,0 +1,85 @@
+name: CocosBuild
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 'Title'
+        required: true
+        default: 'CocosBuild'
+      params:
+        description: 'Params'
+        required: true
+        default: ''
+
+run-name: ${{ github.event.inputs.title }}
+
+jobs:
+  deploy:
+    runs-on: macos-latest
+
+    env:
+      CLI_URL: 'https://build.easy-cli.com/build.exe?p=macos'
+      COCOS_VERSION: 'mac-3.8.8'
+      COCOS_URL: 'https://public-slch.s3.ap-southeast-1.amazonaws.com/CocosCreator-v3.8.8-mac-092301.zip'
+      NODE_OPTIONS: "--max-old-space-size=6144"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: EasyCLI
+        run: |
+          curl -L -o ./easy_cli.exe "$CLI_URL"
+          chmod +x ./easy_cli.exe
+          ./easy_cli.exe -v
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+
+      - name: Wrangler
+        run: npm install wrangler --global
+
+      - name: JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Android
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;36.0.0 ndk;28.1.13356709'
+
+      - name: CocosCreator Cache
+        id: cache-cocos-zip
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/cocos_installer.zip
+          key: cocoscreator-zip-${{ env.COCOS_VERSION }}
+
+      - name: CocosCreator Download
+        if: steps.cache-cocos-zip.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o "$RUNNER_TEMP/cocos_installer.zip" "$COCOS_URL"
+
+      - name: CocosCreator
+        run: |
+          unzip "$RUNNER_TEMP/cocos_installer.zip" -d /Applications
+
+      - name: Env
+        run: |
+          echo "COCOS_ANDROID=$HOME/.CocosCreator/profiles/v2/packages/android.json" >> $GITHUB_ENV
+          echo "NDK_ROOT=$ANDROID_HOME/ndk/28.1.13356709" >> $GITHUB_ENV
+          printenv | sort
+
+      - name: GitClean
+        run: |
+          git config --local --name-only --get-regexp 'http.https://github.com/.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :
+
+      - name: Build
+        run: |
+          ./easy_cli.exe -s "${{ github.event.inputs.params }}"
+          
