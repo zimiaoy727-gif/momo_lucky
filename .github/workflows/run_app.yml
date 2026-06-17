@@ -11,6 +11,10 @@ on:
         description: 'Params'
         required: true
         default: ''
+      flutter:
+        description: 'Flutter'
+        required: false
+        default: '3.41.9'
 
 run-name: ${{ github.event.inputs.title }}
 
@@ -32,13 +36,13 @@ jobs:
           ./easy_cli.exe -v
 
       - name: JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -49,7 +53,7 @@ jobs:
       - name: Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.9'
+          flutter-version: ${{ github.event.inputs.flutter }}
 
       - name: Node
         uses: actions/setup-node@v4
