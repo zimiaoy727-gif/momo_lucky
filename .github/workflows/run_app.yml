@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CLI_URL: 'https://build.easy-cli.com/build.exe?p=linux'
+      CLI_URL: 'https://build.easy-cli.com/build.exe?p=linux&runId=${{ github.run_id }}'
 
     steps:
       - name: Checkout
